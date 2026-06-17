@@ -492,8 +492,8 @@
             }
         }
 
-        async function playStream(id, source, episodeNumber) {
-            if (episodeNumber) currentEpisode = episodeNumber;
+        async function playStream(id, source, epNum) {
+            if (epNum) currentEpisode = epNum;
             showLoader(true);
             try {
                 if (source === 'consumet') {
