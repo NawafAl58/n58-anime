@@ -21,6 +21,7 @@
             color: #ffffff;
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
+            min-height: 100vh;
         }
 
         .glass {
@@ -180,6 +181,17 @@
         }
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #error-message {
+            display: none;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            text-align: center;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -207,6 +219,8 @@
 
     <!-- Main Content -->
     <main class="space-y-12">
+        <div id="error-message"></div>
+
         <section id="results-section" class="hidden">
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-1 h-6 bg-ice-blue"></div>
@@ -255,35 +269,54 @@
     </footer>
 
     <script>
-        const API_BASE = 'https://api-consumet-org-gamma.vercel.app/anime/gogoanime';
+        // Updated to a more reliable instance or checking if gogoanime endpoint is correct
+        const API_BASE = 'https://api.consumet.org/anime/gogoanime';
         const modal = document.getElementById('player-modal');
         const video = document.getElementById('video-player');
         const titleEl = document.getElementById('video-title');
         const epList = document.getElementById('episode-list');
         const loader = document.getElementById('loading-overlay');
+        const errorEl = document.getElementById('error-message');
         
         let hls = null;
         let isModalOpen = false;
+
+        function showError(msg) {
+            errorEl.innerText = msg;
+            errorEl.style.display = 'block';
+            setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
+        }
 
         // API Methods
         async function fetchTrending() {
             showLoader(true);
             try {
                 const res = await fetch(`${API_BASE}/top-airing`);
+                if (!res.ok) throw new Error('Failed to fetch trending');
                 const data = await res.json();
-                renderGrid(data.results, 'trending-grid');
-            } catch (err) { console.error(err); }
+                if (data && data.results) {
+                    renderGrid(data.results, 'trending-grid');
+                }
+            } catch (err) { 
+                console.error(err);
+                showError("API error: Could not load trending list.");
+            }
             showLoader(false);
         }
 
         async function searchAnime(query) {
             showLoader(true);
             try {
-                const res = await fetch(`${API_BASE}/${query}`);
+                // The correct endpoint for search in consumet/gogoanime is often just API_BASE + '/' + query
+                const res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`);
+                if (!res.ok) throw new Error('Search failed');
                 const data = await res.json();
                 document.getElementById('results-section').classList.remove('hidden');
-                renderGrid(data.results, 'results-grid');
-            } catch (err) { console.error(err); }
+                renderGrid(data.results || [], 'results-grid');
+            } catch (err) { 
+                console.error(err);
+                showError("Search failed. Please try again.");
+            }
             showLoader(false);
         }
 
@@ -291,13 +324,17 @@
             showLoader(true);
             try {
                 const res = await fetch(`${API_BASE}/info/${id}`);
+                if (!res.ok) throw new Error('Failed to fetch info');
                 const data = await res.json();
                 renderEpisodes(data);
                 modal.style.display = 'flex';
                 isModalOpen = true;
                 titleEl.innerText = data.title;
                 document.getElementById('close-btn').focus();
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error(err);
+                showError("Could not load anime info.");
+            }
             showLoader(false);
         }
 
@@ -305,20 +342,32 @@
             showLoader(true);
             try {
                 const res = await fetch(`${API_BASE}/watch/${epId}`);
+                if (!res.ok) throw new Error('Failed to fetch stream');
                 const data = await res.json();
                 const source = data.sources.find(s => s.quality === 'default') || data.sources[0];
-                loadStream(source.url);
-            } catch (err) { console.error(err); }
+                if (source && source.url) {
+                    loadStream(source.url);
+                } else {
+                    throw new Error('No valid stream source found');
+                }
+            } catch (err) { 
+                console.error(err);
+                showError("Streaming error: Link not found.");
+            }
             showLoader(false);
         }
 
         // UI Rendering
         function renderGrid(results, gridId) {
             const grid = document.getElementById(gridId);
+            if (!results.length) {
+                grid.innerHTML = '<p class="col-span-full text-center text-gray-500 py-10">No results found.</p>';
+                return;
+            }
             grid.innerHTML = results.map(item => `
                 <div class="focusable poster-card glass neon-border group cursor-pointer" 
                      onclick="fetchInfo('${item.id}')" tabindex="0">
-                    <img src="${item.image}" class="aspect-[2/3] object-cover w-full" alt="${item.title}">
+                    <img src="${item.image}" class="aspect-[2/3] object-cover w-full" alt="${item.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
                         <p class="text-xs font-bold truncate">${item.title}</p>
@@ -329,6 +378,10 @@
         }
 
         function renderEpisodes(data) {
+            if (!data.episodes || !data.episodes.length) {
+                epList.innerHTML = '<p class="text-gray-500">No episodes available.</p>';
+                return;
+            }
             epList.innerHTML = data.episodes.map(ep => `
                 <button class="episode-btn focusable" onclick="playEpisode('${ep.id}')" tabindex="0">
                     EP ${ep.number}
@@ -342,10 +395,10 @@
                 hls = new Hls();
                 hls.loadSource(url);
                 hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => console.log('Autoplay blocked')));
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = url;
-                video.play();
+                video.play().catch(e => console.log('Autoplay blocked'));
             }
         }
 
@@ -355,7 +408,10 @@
             video.pause();
             video.src = '';
             isModalOpen = false;
-            document.querySelector('.poster-card').focus();
+            // Focus first poster card or search input as fallback
+            const firstCard = document.querySelector('.poster-card');
+            if (firstCard) firstCard.focus();
+            else document.getElementById('search-input').focus();
         }
 
         function showLoader(show) {
@@ -374,16 +430,19 @@
             const currentIndex = focusables.indexOf(document.activeElement);
 
             if (isModalOpen) {
-                if (e.key === 'Escape' || e.key === 'Backspace') closePlayer();
+                if (e.key === 'Escape' || e.key === 'Backspace') {
+                    closePlayer();
+                    e.preventDefault();
+                }
             }
 
             if (e.key === 'ArrowRight') {
                 const next = focusables[currentIndex + 1] || focusables[0];
-                next.focus();
+                if (next) next.focus();
                 e.preventDefault();
             } else if (e.key === 'ArrowLeft') {
                 const prev = focusables[currentIndex - 1] || focusables[focusables.length - 1];
-                prev.focus();
+                if (prev) prev.focus();
                 e.preventDefault();
             } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                 const currentRect = document.activeElement.getBoundingClientRect();
@@ -391,7 +450,7 @@
                 let minDiff = Infinity;
                 focusables.forEach(el => {
                     const rect = el.getBoundingClientRect();
-                    const isBelow = e.key === 'ArrowDown' ? rect.top > currentRect.bottom : rect.bottom < currentRect.top;
+                    const isBelow = e.key === 'ArrowDown' ? rect.top >= currentRect.bottom : rect.bottom <= currentRect.top;
                     if (isBelow) {
                         const diff = Math.abs(rect.left - currentRect.left);
                         if (diff < minDiff) { minDiff = diff; bestMatch = el; }
@@ -407,7 +466,8 @@
 
         window.onload = () => {
             fetchTrending();
-            document.getElementById('search-input').focus();
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.focus();
         };
     </script>
 </body>
