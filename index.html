@@ -269,8 +269,12 @@
     </footer>
 
     <script>
-        // Updated to a more reliable instance or checking if gogoanime endpoint is correct
-        const API_BASE = 'https://api.consumet.org/anime/gogoanime';
+        const API_INSTANCES = [
+            'https://api.consumet.org/anime/gogoanime',
+            'https://consumet-api.herokapp.com/anime/gogoanime',
+            'https://api-consumet-org.onrender.com/anime/gogoanime'
+        ];
+        
         const modal = document.getElementById('player-modal');
         const video = document.getElementById('video-player');
         const titleEl = document.getElementById('video-title');
@@ -287,13 +291,23 @@
             setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
         }
 
+        async function fetchWithFallback(endpoint) {
+            for (const base of API_INSTANCES) {
+                try {
+                    const res = await fetch(`${base}${endpoint}`);
+                    if (res.ok) return await res.json();
+                } catch (e) {
+                    console.warn(`Failed to fetch from ${base}, trying next...`);
+                }
+            }
+            throw new Error('All API instances failed');
+        }
+
         // API Methods
         async function fetchTrending() {
             showLoader(true);
             try {
-                const res = await fetch(`${API_BASE}/top-airing`);
-                if (!res.ok) throw new Error('Failed to fetch trending');
-                const data = await res.json();
+                const data = await fetchWithFallback('/top-airing');
                 if (data && data.results) {
                     renderGrid(data.results, 'trending-grid');
                 }
@@ -307,10 +321,7 @@
         async function searchAnime(query) {
             showLoader(true);
             try {
-                // The correct endpoint for search in consumet/gogoanime is often just API_BASE + '/' + query
-                const res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`);
-                if (!res.ok) throw new Error('Search failed');
-                const data = await res.json();
+                const data = await fetchWithFallback(`/${encodeURIComponent(query)}`);
                 document.getElementById('results-section').classList.remove('hidden');
                 renderGrid(data.results || [], 'results-grid');
             } catch (err) { 
@@ -323,9 +334,7 @@
         async function fetchInfo(id) {
             showLoader(true);
             try {
-                const res = await fetch(`${API_BASE}/info/${id}`);
-                if (!res.ok) throw new Error('Failed to fetch info');
-                const data = await res.json();
+                const data = await fetchWithFallback(`/info/${id}`);
                 renderEpisodes(data);
                 modal.style.display = 'flex';
                 isModalOpen = true;
@@ -341,9 +350,7 @@
         async function playEpisode(epId) {
             showLoader(true);
             try {
-                const res = await fetch(`${API_BASE}/watch/${epId}`);
-                if (!res.ok) throw new Error('Failed to fetch stream');
-                const data = await res.json();
+                const data = await fetchWithFallback(`/watch/${epId}`);
                 const source = data.sources.find(s => s.quality === 'default') || data.sources[0];
                 if (source && source.url) {
                     loadStream(source.url);
