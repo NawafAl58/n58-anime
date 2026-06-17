@@ -290,11 +290,7 @@
 
     <script>
         const JIKAN_BASE = 'https://api.jikan.moe/v4';
-        const CONSUMET_FALLBACKS = [
-            'https://api.consumet.org/anime/gogoanime',
-            'https://consumet-api.herokapp.com/anime/gogoanime',
-            'https://api-consumet-org.onrender.com/anime/gogoanime'
-        ];
+        const CONSUMET_BASE = 'https://consumet-api-private-n58-nawafal58s-projects.vercel.app/anime/gogoanime';
         
         const modal = document.getElementById('player-modal');
         const video = document.getElementById('video-player');
@@ -380,34 +376,31 @@
         async function tryStream() {
             showLoader(true);
             const query = currentAnimeTitle.split(' ').slice(0, 3).join(' '); // Search fallback
-            let foundAnime = null;
-
-            for (const base of CONSUMET_FALLBACKS) {
-                try {
-                    const searchRes = await fetch(`${base}/${encodeURIComponent(query)}`);
-                    const searchData = await searchRes.json();
-                    if (searchData.results && searchData.results.length > 0) {
-                        foundAnime = searchData.results[0];
-                        const infoRes = await fetch(`${base}/info/${foundAnime.id}`);
-                        const infoData = await infoRes.json();
-                        renderEpisodes(infoData, base);
-                        document.getElementById('episodes-container').classList.remove('hidden');
-                        streamBtn.classList.add('hidden');
-                        showLoader(false);
-                        return;
-                    }
-                } catch (e) {
-                    console.warn(`Streaming fallback failed on ${base}`);
+            
+            try {
+                const searchRes = await fetch(`${CONSUMET_BASE}/${encodeURIComponent(query)}`);
+                const searchData = await searchRes.json();
+                if (searchData.results && searchData.results.length > 0) {
+                    const foundAnime = searchData.results[0];
+                    const infoRes = await fetch(`${CONSUMET_BASE}/info/${foundAnime.id}`);
+                    const infoData = await infoRes.json();
+                    renderEpisodes(infoData);
+                    document.getElementById('episodes-container').classList.remove('hidden');
+                    streamBtn.classList.add('hidden');
+                } else {
+                    throw new Error('No streaming results');
                 }
+            } catch (e) {
+                console.error(e);
+                showError("Streaming currently unavailable for this title.");
             }
-            showError("Streaming currently unavailable for this title.");
             showLoader(false);
         }
 
-        async function playEpisode(epId, apiBase) {
+        async function playEpisode(epId) {
             showLoader(true);
             try {
-                const res = await fetch(`${apiBase}/watch/${epId}`);
+                const res = await fetch(`${CONSUMET_BASE}/watch/${epId}`);
                 const data = await res.json();
                 const source = data.sources.find(s => s.quality === 'default') || data.sources[0];
                 if (source && source.url) {
@@ -444,13 +437,13 @@
             `).join('');
         }
 
-        function renderEpisodes(data, apiBase) {
+        function renderEpisodes(data) {
             if (!data.episodes || !data.episodes.length) {
                 epList.innerHTML = '<p class="text-gray-500">No streaming episodes found.</p>';
                 return;
             }
             epList.innerHTML = data.episodes.map(ep => `
-                <button class="episode-btn focusable" onclick="playEpisode('${ep.id}', '${apiBase}')" tabindex="0">
+                <button class="episode-btn focusable" onclick="playEpisode('${ep.id}')" tabindex="0">
                     EP ${ep.number}
                 </button>
             `).join('');
