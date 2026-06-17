@@ -331,6 +331,8 @@
         let currentImdbId = '';
         let currentMalId = '';
         let activeSource = 'consumet';
+        let currentSeason = 1;
+        let currentEpisode = 1;
 
         function showError(msg) {
             errorEl.innerText = msg;
@@ -445,7 +447,7 @@
         async function fetchTorrentio() {
             if (!currentImdbId) throw new Error('No IMDb ID');
             // Try series first
-            let url = `${TORRENTIO_BASE}/stream/series/${currentImdbId}:1:1.json`;
+            let url = `${TORRENTIO_BASE}/stream/series/${currentImdbId}:${currentSeason}:${currentEpisode}.json`;
             let res = await fetch(url);
             let data = await res.json();
             
@@ -462,7 +464,7 @@
 
         async function fetchOrion() {
             if (!currentImdbId) throw new Error('No IMDb ID');
-            const url = `https://stremio-orionoid.strem.fun/stream/series/${currentImdbId}:1:1.json`;
+            const url = `https://stremio-orionoid.strem.fun/stream/series/${currentImdbId}:${currentSeason}:${currentEpisode}.json`;
             const res = await fetch(url);
             const data = await res.json();
             renderEpisodes(data.streams, 'orion');
@@ -477,7 +479,7 @@
 
             if (source === 'consumet') {
                 epList.innerHTML = items.map(ep => `
-                    <button class="episode-btn focusable" onclick="playStream('${ep.id}', 'consumet')" tabindex="0">
+                    <button class="episode-btn focusable" onclick="playStream('${ep.id}', 'consumet', ${ep.number})" tabindex="0">
                         EP ${ep.number}
                     </button>
                 `).join('');
@@ -490,7 +492,8 @@
             }
         }
 
-        async function playStream(id, source) {
+        async function playStream(id, source, episodeNumber) {
+            if (episodeNumber) currentEpisode = episodeNumber;
             showLoader(true);
             try {
                 if (source === 'consumet') {
