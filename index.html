@@ -42,10 +42,13 @@
             text-shadow: 0 0 8px var(--ice-blue);
         }
 
-        .neon-glow:focus {
+        /* TV Navigation Focus States */
+        .focusable:focus {
             outline: none;
-            box-shadow: 0 0 15px var(--neon-purple);
-            border-color: var(--neon-purple);
+            box-shadow: 0 0 20px var(--ice-blue);
+            border-color: var(--ice-blue);
+            transform: scale(1.05);
+            z-index: 10;
         }
 
         .poster-card {
@@ -54,9 +57,9 @@
             overflow: hidden;
         }
 
-        .poster-card:hover {
+        .poster-card:hover, .poster-card:focus {
             transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 20px var(--ice-blue);
             border-color: var(--ice-blue);
         }
 
@@ -64,7 +67,7 @@
             transition: filter 0.3s ease;
         }
 
-        .poster-card:hover img {
+        .poster-card:hover img, .poster-card:focus img {
             filter: brightness(0.7);
         }
 
@@ -82,7 +85,7 @@
             background: rgba(0,0,0,0.4);
         }
 
-        .poster-card:hover .play-overlay {
+        .poster-card:hover .play-overlay, .poster-card:focus .play-overlay {
             opacity: 1;
         }
 
@@ -125,6 +128,12 @@
             border: 2px solid var(--ice-blue);
             box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
         }
+
+        #close-btn:focus {
+            color: var(--ice-blue);
+            transform: scale(1.2);
+            outline: none;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -138,7 +147,8 @@
         
         <div class="relative w-full md:w-96">
             <input type="text" placeholder="Search anime movies, series..." 
-                   class="w-full bg-black/40 glass neon-glow py-3 px-12 rounded-full text-sm focus:ring-0">
+                   class="focusable w-full bg-black/40 glass neon-border py-3 px-12 rounded-full text-sm focus:ring-0"
+                   tabindex="0">
             <i class="fa fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
     </header>
@@ -152,7 +162,8 @@
             <h2 class="text-3xl md:text-5xl font-black mb-4 neon-text-blue uppercase italic">Sword Art Online: Progressive</h2>
             <p class="text-gray-300 max-w-xl text-sm md:text-base mb-6 line-clamp-2 md:line-clamp-none">Return to where it all began. The struggle for survival continues in Aincrad.</p>
             <button onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" 
-                    class="glass border-ice-blue/50 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10 transition-all w-fit">
+                    class="focusable glass border-ice-blue/50 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10 transition-all w-fit"
+                    tabindex="0">
                 <i class="fa fa-play text-ice-blue"></i> WATCH NOW
             </button>
         </div>
@@ -169,7 +180,7 @@
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 <!-- Movie 1 -->
-                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BOGY3N2I2YmEtZDVjNi00N2VlLTgyMjktYmE5N2VlZDEyZDA0XkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Your Name">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -178,7 +189,7 @@
                     </div>
                 </div>
                 <!-- Movie 2 -->
-                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BODRmZDU5MDAtNzMzMi00ZTIyLThmCMAtZ2UyYmZlMWE2ZWZjXkEyXkFqcGdeQXVyMzMxOTEwMTU@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Spirited Away">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -187,7 +198,7 @@
                     </div>
                 </div>
                 <!-- Movie 3 -->
-                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BMjA4NjkzNTEyNV5BMl5BanBnXkFtZTgwMDQ2NzU3MDI@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Weathering With You">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -196,7 +207,7 @@
                     </div>
                 </div>
                 <!-- Movie 4 -->
-                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BNGYyZGM5MGMtYTY2Ni00M2Y1LWIzNjQtYWVlM2M1NjM0YzLzXkEyXkFqcGdeQXVyMTA4NjE0NjEy._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Jujutsu Kaisen 0">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -205,7 +216,7 @@
                     </div>
                 </div>
                 <!-- Movie 5 -->
-                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BODlkZjk2OTEtY2ZlYy00YTllLTg2YzAtYjA1ZTM5OTY3ZTM3XkEyXkFqcGdeQXVyMTAyOTE2ODg0._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Demon Slayer: Mugen Train">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -214,7 +225,7 @@
                     </div>
                 </div>
                  <!-- Movie 6 -->
-                 <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                 <div class="focusable poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BMjMxNjY2MDU1OV5BMl5BanBnXkFtZTgwNzY1MTUwNTM@._V1_FMjpg_UX1000_.jpg" class="aspect-[2/3] object-cover w-full" alt="A Silent Voice">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -232,7 +243,7 @@
                 <h3 class="text-xl font-bold uppercase tracking-widest neon-text-blue">Featured Series</h3>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BZjJlNzE5YzEtYzQwYS00NWUyLTk4MDAtMzQxMzY1MDY1ZmQ4XkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Solo Leveling">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -240,7 +251,7 @@
                         <p class="text-[10px] text-purple-400">TV • Season 1</p>
                     </div>
                 </div>
-                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BN2U5MGRjYWItYzQ2OS00YTNjLThjMGYtM2I3N2VlMmYyM2E1XkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Chainsaw Man">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -248,7 +259,7 @@
                         <p class="text-[10px] text-purple-400">TV • Season 1</p>
                     </div>
                 </div>
-                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BMTNjNGU4NTUtY2ZkN200N2EzLTliNWMtOTMxNzVlOTUxN2MwXkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Attack on Titan">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -256,7 +267,7 @@
                         <p class="text-[10px] text-purple-400">TV • Final Season</p>
                     </div>
                 </div>
-                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BNzQyYzU3Y2MtOWY2Yy00ZGM2LTg3ZTUtMDJkM2U3ZDU2ZGU5XkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Fullmetal Alchemist">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -264,7 +275,7 @@
                         <p class="text-[10px] text-purple-400">TV • Complete</p>
                     </div>
                 </div>
-                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BNGYyZGM5MGMtYTY2Ni00M2Y1LWIzNjQtYWVlM2M1NjM0YzLzXkEyXkFqcGdeQXVyMTA4NjE0NjEy._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Jujutsu Kaisen">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -272,7 +283,7 @@
                         <p class="text-[10px] text-purple-400">TV • Season 2</p>
                     </div>
                 </div>
-                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                <div class="focusable poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" tabindex="0">
                     <img src="https://m.media-amazon.com/images/M/MV5BNDJhYTk2NzctZDE3NC00MGExLTgxMDAtYTRhOTg2YmFlYmNlXkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Cyberpunk Edgerunners">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
@@ -288,10 +299,10 @@
     <!-- Player Modal -->
     <div id="player-modal" class="modal" onclick="closePlayer()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="absolute -top-12 right-0 text-white text-3xl hover:text-ice-blue" onclick="closePlayer()">
+            <button id="close-btn" class="absolute -top-12 right-0 text-white text-3xl hover:text-ice-blue focusable" onclick="closePlayer()" tabindex="0">
                 <i class="fa fa-times"></i>
             </button>
-            <iframe id="video-frame" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <iframe id="video-frame" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen tabindex="-1"></iframe>
             <div class="mt-4 p-4 glass neon-border">
                 <h4 id="video-title" class="text-xl font-bold neon-text-purple">Streaming Now</h4>
                 <p class="text-xs text-gray-400 mt-2">Server: N58-Premium-01 (Ultra HD)</p>
@@ -306,10 +317,10 @@
             <p class="text-[10px] text-gray-600 uppercase mt-1">Made by Nawaf</p>
         </div>
         <div class="flex gap-6 text-sm text-gray-400">
-            <a href="#" class="hover:text-ice-blue transition-colors">Privacy</a>
-            <a href="#" class="hover:text-ice-blue transition-colors">DMCA</a>
-            <a href="#" class="hover:text-ice-blue transition-colors">Terms</a>
-            <a href="#" class="hover:text-ice-blue transition-colors">Discord</a>
+            <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">Privacy</a>
+            <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">DMCA</a>
+            <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">Terms</a>
+            <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">Discord</a>
         </div>
         <div class="text-[10px] text-gray-600">
             &copy; 2026 N58 Anime. All rights reserved.
@@ -319,18 +330,96 @@
     <script>
         const modal = document.getElementById('player-modal');
         const frame = document.getElementById('video-frame');
+        const closeBtn = document.getElementById('close-btn');
+
+        let isModalOpen = false;
 
         function openPlayer(url) {
             frame.src = url;
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
+            isModalOpen = true;
+            closeBtn.focus();
         }
 
         function closePlayer() {
             modal.style.display = 'none';
             frame.src = '';
             document.body.style.overflow = 'auto';
+            isModalOpen = false;
+            // Return focus to first poster card after closing
+            document.querySelector('.poster-card').focus();
         }
+
+        // D-Pad / Keyboard Navigation Logic
+        document.addEventListener('keydown', (e) => {
+            const focusables = Array.from(document.querySelectorAll('.focusable, .poster-card, [tabindex="0"]'));
+            const currentIndex = focusables.indexOf(document.activeElement);
+
+            if (isModalOpen) {
+                // Focus Trap in Modal
+                if (e.key === 'Escape' || e.key === 'Backspace') {
+                    closePlayer();
+                }
+                return; // Prevent main nav while modal open
+            }
+
+            if (e.key === 'ArrowRight') {
+                const next = focusables[currentIndex + 1] || focusables[0];
+                next.focus();
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft') {
+                const prev = focusables[currentIndex - 1] || focusables[focusables.length - 1];
+                prev.focus();
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                // Approximate vertical jump logic
+                const currentRect = document.activeElement.getBoundingClientRect();
+                let bestMatch = null;
+                let minDiff = Infinity;
+
+                focusables.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.top > currentRect.bottom) {
+                        const diff = Math.abs(rect.left - currentRect.left);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestMatch = el;
+                        }
+                    }
+                });
+
+                if (bestMatch) bestMatch.focus();
+                e.preventDefault();
+            } else if (e.key === 'ArrowUp') {
+                const currentRect = document.activeElement.getBoundingClientRect();
+                let bestMatch = null;
+                let minDiff = Infinity;
+
+                focusables.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.bottom < currentRect.top) {
+                        const diff = Math.abs(rect.left - currentRect.left);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestMatch = el;
+                        }
+                    }
+                });
+
+                if (bestMatch) bestMatch.focus();
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                if (document.activeElement.click) {
+                    document.activeElement.click();
+                }
+            }
+        });
+
+        // Initialize focus
+        window.onload = () => {
+            document.querySelector('input').focus();
+        };
     </script>
 </body>
 </html>
