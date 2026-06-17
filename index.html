@@ -351,18 +351,14 @@
                 titleEl.innerText = data.title;
                 synopsisEl.innerText = data.synopsis || 'No synopsis available.';
                 
-                // Show trailer if exists
-                if (data.trailer && data.trailer.embed_url) {
-                    trailer.src = data.trailer.embed_url;
-                    trailer.classList.remove('hidden');
-                    video.classList.add('hidden');
-                } else {
-                    trailer.classList.add('hidden');
-                    trailer.src = '';
-                }
+                // Hide video and trailer initial state
+                video.classList.add('hidden');
+                trailer.classList.add('hidden');
+                trailer.src = '';
 
-                streamBtn.classList.remove('hidden');
-                document.getElementById('episodes-container').classList.add('hidden');
+                // Load episodes immediately for better UX
+                await tryStream();
+
                 modal.style.display = 'flex';
                 isModalOpen = true;
                 document.getElementById('close-btn').focus();
@@ -393,6 +389,8 @@
             } catch (e) {
                 console.error(e);
                 showError("Streaming currently unavailable for this title.");
+                epList.innerHTML = '<p class="text-gray-500">No episodes found on streaming server.</p>';
+                document.getElementById('episodes-container').classList.remove('hidden');
             }
             showLoader(false);
         }
@@ -402,7 +400,11 @@
             try {
                 const res = await fetch(`${CONSUMET_BASE}/watch/${epId}`);
                 const data = await res.json();
-                const source = data.sources.find(s => s.quality === 'default') || data.sources[0];
+                
+                // Prefer HLS/m3u8 sources
+                const hlsSource = data.sources.find(s => s.url.includes('.m3u8'));
+                const source = hlsSource || data.sources.find(s => s.quality === 'default') || data.sources[0];
+                
                 if (source && source.url) {
                     trailer.classList.add('hidden');
                     video.classList.remove('hidden');
@@ -428,7 +430,7 @@
                 <div class="focusable poster-card glass neon-border group cursor-pointer" 
                      onclick="fetchInfo('${item.mal_id}')" tabindex="0">
                     <img src="${item.images.jpg.large_image_url}" class="aspect-[2/3] object-cover w-full" alt="${item.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                    <div class="play-overlay"><i class="fa fa-info-circle text-4xl text-white"></i></div>
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
                         <p class="text-xs font-bold truncate">${item.title}</p>
                         <p class="text-[10px] text-gray-500 mt-1 uppercase">${item.type || 'TV'} • ${item.year || 'N/A'}</p>
