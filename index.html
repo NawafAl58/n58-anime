@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N58 Anime</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --obsidian: #050505;
+            --neon-purple: #a855f7;
+            --ice-blue: #38bdf8;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(168, 85, 247, 0.3);
+        }
+
+        body {
+            background-color: var(--obsidian);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+        }
+
+        .neon-border {
+            box-shadow: 0 0 10px var(--glass-border), inset 0 0 5px var(--glass-border);
+        }
+
+        .neon-text-purple {
+            text-shadow: 0 0 8px var(--neon-purple);
+        }
+
+        .neon-text-blue {
+            text-shadow: 0 0 8px var(--ice-blue);
+        }
+
+        .neon-glow:focus {
+            outline: none;
+            box-shadow: 0 0 15px var(--neon-purple);
+            border-color: var(--neon-purple);
+        }
+
+        .poster-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .poster-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            border-color: var(--ice-blue);
+        }
+
+        .poster-card img {
+            transition: filter 0.3s ease;
+        }
+
+        .poster-card:hover img {
+            filter: brightness(0.7);
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: rgba(0,0,0,0.4);
+        }
+
+        .poster-card:hover .play-overlay {
+            opacity: 1;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--obsidian);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--neon-purple);
+            border-radius: 4px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 1000px;
+            position: relative;
+        }
+
+        #video-frame {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 12px;
+            border: 2px solid var(--ice-blue);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+        <div>
+            <h1 class="text-4xl font-extrabold neon-text-purple tracking-tighter">N58 ANIME</h1>
+            <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Made by Nawaf</p>
+        </div>
+        
+        <div class="relative w-full md:w-96">
+            <input type="text" placeholder="Search anime movies, series..." 
+                   class="w-full bg-black/40 glass neon-glow py-3 px-12 rounded-full text-sm focus:ring-0">
+            <i class="fa fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+    </header>
+
+    <!-- Hero Section (Mock) -->
+    <section class="mb-12 relative rounded-2xl overflow-hidden glass neon-border h-[300px] md:h-[450px]">
+        <img src="https://images.unsplash.com/photo-1578632292335-df3abbb0d586?auto=format&fit=crop&q=80&w=2000" 
+             class="w-full h-full object-cover opacity-50" alt="Hero">
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent flex flex-col justify-end p-6 md:p-12">
+            <span class="bg-purple-600/80 text-white text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-4 uppercase">Trending #1</span>
+            <h2 class="text-3xl md:text-5xl font-black mb-4 neon-text-blue uppercase italic">Sword Art Online: Progressive</h2>
+            <p class="text-gray-300 max-w-xl text-sm md:text-base mb-6 line-clamp-2 md:line-clamp-none">Return to where it all began. The struggle for survival continues in Aincrad.</p>
+            <button onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')" 
+                    class="glass border-ice-blue/50 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10 transition-all w-fit">
+                <i class="fa fa-play text-ice-blue"></i> WATCH NOW
+            </button>
+        </div>
+    </section>
+
+    <!-- Categories -->
+    <main class="space-y-12">
+        
+        <!-- Movies -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-1 h-6 bg-purple-500"></div>
+                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-purple">Latest Movies</h3>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <!-- Movie 1 -->
+                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BOGY3N2I2YmEtZDVjNi00N2VlLTgyMjktYmE5N2VlZDEyZDA0XkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Your Name">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Your Name</p>
+                        <p class="text-[10px] text-ice-blue">Movie • 2016</p>
+                    </div>
+                </div>
+                <!-- Movie 2 -->
+                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BODRmZDU5MDAtNzMzMi00ZTIyLThmCMAtZ2UyYmZlMWE2ZWZjXkEyXkFqcGdeQXVyMzMxOTEwMTU@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Spirited Away">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Spirited Away</p>
+                        <p class="text-[10px] text-ice-blue">Movie • 2001</p>
+                    </div>
+                </div>
+                <!-- Movie 3 -->
+                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BMjA4NjkzNTEyNV5BMl5BanBnXkFtZTgwMDQ2NzU3MDI@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Weathering With You">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Weathering With You</p>
+                        <p class="text-[10px] text-ice-blue">Movie • 2019</p>
+                    </div>
+                </div>
+                <!-- Movie 4 -->
+                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BNGYyZGM5MGMtYTY2Ni00M2Y1LWIzNjQtYWVlM2M1NjM0YzLzXkEyXkFqcGdeQXVyMTA4NjE0NjEy._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Jujutsu Kaisen 0">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Jujutsu Kaisen 0</p>
+                        <p class="text-[10px] text-ice-blue">Movie • 2021</p>
+                    </div>
+                </div>
+                <!-- Movie 5 -->
+                <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BODlkZjk2OTEtY2ZlYy00YTllLTg2YzAtYjA1ZTM5OTY3ZTM3XkEyXkFqcGdeQXVyMTAyOTE2ODg0._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Demon Slayer: Mugen Train">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Mugen Train</p>
+                        <p class="text-[10px] text-ice-blue">Movie • 2020</p>
+                    </div>
+                </div>
+                 <!-- Movie 6 -->
+                 <div class="poster-card glass neon-border group cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BMjMxNjY2MDU1OV5BMl5BanBnXkFtZTgwNzY1MTUwNTM@._V1_FMjpg_UX1000_.jpg" class="aspect-[2/3] object-cover w-full" alt="A Silent Voice">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">A Silent Voice</p>
+                        <p class="text-[10px] text-ice-blue">Movie • 2016</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Series -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-1 h-6 bg-blue-500"></div>
+                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-blue">Featured Series</h3>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BZjJlNzE5YzEtYzQwYS00NWUyLTk4MDAtMzQxMzY1MDY1ZmQ4XkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Solo Leveling">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Solo Leveling</p>
+                        <p class="text-[10px] text-purple-400">TV • Season 1</p>
+                    </div>
+                </div>
+                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BN2U5MGRjYWItYzQ2OS00YTNjLThjMGYtM2I3N2VlMmYyM2E1XkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Chainsaw Man">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Chainsaw Man</p>
+                        <p class="text-[10px] text-purple-400">TV • Season 1</p>
+                    </div>
+                </div>
+                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BMTNjNGU4NTUtY2ZkN200N2EzLTliNWMtOTMxNzVlOTUxN2MwXkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Attack on Titan">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Attack on Titan</p>
+                        <p class="text-[10px] text-purple-400">TV • Final Season</p>
+                    </div>
+                </div>
+                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BNzQyYzU3Y2MtOWY2Yy00ZGM2LTg3ZTUtMDJkM2U3ZDU2ZGU5XkEyXkFqcGdeQXVyMzg2MzE2OTE@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Fullmetal Alchemist">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">FMAB</p>
+                        <p class="text-[10px] text-purple-400">TV • Complete</p>
+                    </div>
+                </div>
+                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BNGYyZGM5MGMtYTY2Ni00M2Y1LWIzNjQtYWVlM2M1NjM0YzLzXkEyXkFqcGdeQXVyMTA4NjE0NjEy._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Jujutsu Kaisen">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Jujutsu Kaisen</p>
+                        <p class="text-[10px] text-purple-400">TV • Season 2</p>
+                    </div>
+                </div>
+                <div class="poster-card glass neon-border cursor-pointer" onclick="openPlayer('https://www.youtube.com/embed/dQw4w9WgXcQ')">
+                    <img src="https://m.media-amazon.com/images/M/MV5BNDJhYTk2NzctZDE3NC00MGExLTgxMDAtYTRhOTg2YmFlYmNlXkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg" class="aspect-[2/3] object-cover w-full" alt="Cyberpunk Edgerunners">
+                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                    <div class="p-3">
+                        <p class="text-xs font-bold truncate">Edgerunners</p>
+                        <p class="text-[10px] text-purple-400">TV • Series</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Player Modal -->
+    <div id="player-modal" class="modal" onclick="closePlayer()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="absolute -top-12 right-0 text-white text-3xl hover:text-ice-blue" onclick="closePlayer()">
+                <i class="fa fa-times"></i>
+            </button>
+            <iframe id="video-frame" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <div class="mt-4 p-4 glass neon-border">
+                <h4 id="video-title" class="text-xl font-bold neon-text-purple">Streaming Now</h4>
+                <p class="text-xs text-gray-400 mt-2">Server: N58-Premium-01 (Ultra HD)</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-20 py-10 border-t border-glass-border flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+            <p class="text-xl font-bold neon-text-purple tracking-tighter">N58 ANIME</p>
+            <p class="text-[10px] text-gray-600 uppercase mt-1">Made by Nawaf</p>
+        </div>
+        <div class="flex gap-6 text-sm text-gray-400">
+            <a href="#" class="hover:text-ice-blue transition-colors">Privacy</a>
+            <a href="#" class="hover:text-ice-blue transition-colors">DMCA</a>
+            <a href="#" class="hover:text-ice-blue transition-colors">Terms</a>
+            <a href="#" class="hover:text-ice-blue transition-colors">Discord</a>
+        </div>
+        <div class="text-[10px] text-gray-600">
+            &copy; 2026 N58 Anime. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        const modal = document.getElementById('player-modal');
+        const frame = document.getElementById('video-frame');
+
+        function openPlayer(url) {
+            frame.src = url;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePlayer() {
+            modal.style.display = 'none';
+            frame.src = '';
+            document.body.style.overflow = 'auto';
+        }
+    </script>
+</body>
+</html>
