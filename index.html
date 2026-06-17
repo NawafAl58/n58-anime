@@ -316,7 +316,6 @@
         const JIKAN_BASE = 'https://api.jikan.moe/v4';
         const CONSUMET_BASE = 'https://consumet-api-private-n58-nawafal58s-projects.vercel.app/anime/gogoanime';
         const TORRENTIO_BASE = 'https://torrentio.strem.fun';
-        const ORION_BASE = 'https://api.orionoid.com'; // Requires user API Key for full resolution, using public-ish addon endpoint patterns
         
         const modal = document.getElementById('player-modal');
         const video = document.getElementById('video-player');
@@ -352,7 +351,7 @@
                 renderGrid(data.data || [], 'trending-grid');
             } catch (err) { 
                 console.error(err);
-                showError("Stability issue: Could not load top anime list.");
+                showError("Top anime load failed.");
             }
             showLoader(false);
         }
@@ -365,7 +364,7 @@
                 renderGrid(data.data || [], 'results-grid');
             } catch (err) { 
                 console.error(err);
-                showError("Search failed. Please try again.");
+                showError("Search failed.");
             }
             showLoader(false);
         }
@@ -377,23 +376,28 @@
                 currentAnimeTitle = data.title;
                 currentMalId = malId;
                 
-                // Get IMDb ID via external IDs (Jikan provides this)
-                const extData = await fetchJikan(`/anime/${malId}/external`);
-                const imdb = extData.data.find(x => x.name === 'IMDb');
-                currentImdbId = imdb ? imdb.url.split('/').filter(Boolean).pop() : '';
-                
                 titleEl.innerText = data.title;
                 synopsisEl.innerText = data.synopsis || 'No synopsis available.';
                 
+                // Get IMDb ID via external IDs
+                try {
+                    const extData = await fetchJikan(`/anime/${malId}/external`);
+                    const imdb = extData.data.find(x => x.name === 'IMDb');
+                    currentImdbId = imdb ? imdb.url.split('/').filter(Boolean).pop() : '';
+                } catch (e) {
+                    console.error("External ID fetch failed", e);
+                    currentImdbId = '';
+                }
+                
                 video.classList.add('hidden');
-                await loadCurrentSource();
-
                 modal.style.display = 'flex';
                 isModalOpen = true;
+                
+                await loadCurrentSource();
                 document.getElementById('close-btn').focus();
             } catch (err) { 
                 console.error(err);
-                showError("Could not load anime metadata.");
+                showError("Metadata error.");
             }
             showLoader(false);
         }
@@ -418,7 +422,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                epList.innerHTML = '<p class="text-gray-500">Source currently unavailable.</p>';
+                epList.innerHTML = '<p class="text-gray-500">Source error.</p>';
             }
             showLoader(false);
         }
@@ -439,20 +443,25 @@
         }
 
         async function fetchTorrentio() {
-            if (!currentImdbId) throw new Error('No IMDb ID for Torrentio');
-            // Stremio addon pattern: /stream/series/{id}:{s}:{e}.json or /stream/movie/{id}.json
-            const type = 'series'; // For anime we usually treat as series
-            const url = `${TORRENTIO_BASE}/stream/${type}/${currentImdbId}:1:1.json`;
-            const res = await fetch(url);
-            const data = await res.json();
+            if (!currentImdbId) throw new Error('No IMDb ID');
+            // Try series first
+            let url = `${TORRENTIO_BASE}/stream/series/${currentImdbId}:1:1.json`;
+            let res = await fetch(url);
+            let data = await res.json();
+            
+            if (!data.streams || !data.streams.length) {
+                // Try movie
+                url = `${TORRENTIO_BASE}/stream/movie/${currentImdbId}.json`;
+                res = await fetch(url);
+                data = await res.json();
+            }
+            
             renderEpisodes(data.streams, 'torrentio');
             document.getElementById('episodes-container').classList.remove('hidden');
         }
 
         async function fetchOrion() {
-            if (!currentImdbId) throw new Error('No IMDb ID for Orion');
-            // Using a public-ish pattern or proxy if direct API fails due to auth
-            // Here we simulate resolution via IMDb ID
+            if (!currentImdbId) throw new Error('No IMDb ID');
             const url = `https://stremio-orionoid.strem.fun/stream/series/${currentImdbId}:1:1.json`;
             const res = await fetch(url);
             const data = await res.json();
@@ -473,9 +482,8 @@
                     </button>
                 `).join('');
             } else {
-                // Torrentio/Orion return direct stream objects
                 epList.innerHTML = items.map((s, idx) => `
-                    <button class="episode-btn focusable" onclick="playDirectStream('${s.url || s.infoHash}', '${s.title || 'Stream ' + (idx+1)}')" tabindex="0">
+                    <button class="episode-btn focusable" onclick="playDirectStream('${s.url || ''}', '${s.infoHash || ''}')" tabindex="0">
                         ${s.name || 'Stream'} - ${idx + 1}
                     </button>
                 `).join('');
@@ -492,14 +500,17 @@
                     const url = hlsSource ? hlsSource.url : (data.sources[0]?.url);
                     if (url) loadStream(url);
                 }
-            } catch (err) { showError("Streaming error."); }
+            } catch (err) { showError("Stream error."); }
             showLoader(false);
         }
 
-        function playDirectStream(url, title) {
-            if (!url) { showError("No direct link available."); return; }
-            // If it's an infohash (magnet), we might need a debrid resolver, but assuming direct links for this UI
-            loadStream(url);
+        function playDirectStream(url, hash) {
+            if (url) {
+                loadStream(url);
+            } else if (hash) {
+                // If it's only a hash, we'd need a debrid client or a local stremio-service
+                showError("Direct link missing (Magnet).");
+            }
         }
 
         function loadStream(url) {
@@ -509,10 +520,10 @@
                 hls = new Hls();
                 hls.loadSource(url);
                 hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => console.log(e)));
             } else {
                 video.src = url;
-                video.play();
+                video.play().catch(e => console.log(e));
             }
         }
 
