@@ -134,6 +134,13 @@
             background: #000;
         }
 
+        #trailer-frame {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 12px;
+            border: 2px solid var(--neon-purple);
+        }
+
         .episode-list {
             display: flex;
             gap: 10px;
@@ -232,7 +239,7 @@
         <section id="trending-section">
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-1 h-6 bg-purple-500"></div>
-                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-purple">Trending Now</h3>
+                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-purple">Top Rated</h3>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4" id="trending-grid"></div>
         </section>
@@ -244,12 +251,25 @@
             <button id="close-btn" class="absolute -top-12 right-0 text-white text-3xl hover:text-ice-blue focusable" onclick="closePlayer()" tabindex="0">
                 <i class="fa fa-times"></i>
             </button>
-            <video id="video-player" controls playsinline></video>
+            
+            <div id="video-container">
+                <video id="video-player" controls playsinline class="hidden"></video>
+                <iframe id="trailer-frame" frameborder="0" allowfullscreen class="hidden"></iframe>
+            </div>
+
             <div class="glass neon-border p-6">
-                <h4 id="video-title" class="text-2xl font-black neon-text-purple mb-4">Loading Anime...</h4>
-                <div id="episodes-container">
+                <div class="flex justify-between items-start mb-4">
+                    <h4 id="video-title" class="text-2xl font-black neon-text-purple">Loading Anime...</h4>
+                    <button id="stream-btn" class="hidden px-4 py-2 bg-ice-blue text-black font-bold rounded-lg hover:scale-105 transition-transform" onclick="tryStream()">
+                        <i class="fa fa-play mr-2"></i>WATCH NOW
+                    </button>
+                </div>
+                <div id="episodes-container" class="hidden">
                     <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Select Episode</p>
                     <div class="episode-list focusable" id="episode-list" tabindex="0"></div>
+                </div>
+                <div id="meta-container" class="mt-4 text-sm text-gray-400">
+                    <p id="anime-synopsis" class="line-clamp-3"></p>
                 </div>
             </div>
         </div>
@@ -269,7 +289,8 @@
     </footer>
 
     <script>
-        const API_INSTANCES = [
+        const JIKAN_BASE = 'https://api.jikan.moe/v4';
+        const CONSUMET_FALLBACKS = [
             'https://api.consumet.org/anime/gogoanime',
             'https://consumet-api.herokapp.com/anime/gogoanime',
             'https://api-consumet-org.onrender.com/anime/gogoanime'
@@ -277,13 +298,17 @@
         
         const modal = document.getElementById('player-modal');
         const video = document.getElementById('video-player');
+        const trailer = document.getElementById('trailer-frame');
         const titleEl = document.getElementById('video-title');
         const epList = document.getElementById('episode-list');
         const loader = document.getElementById('loading-overlay');
         const errorEl = document.getElementById('error-message');
+        const streamBtn = document.getElementById('stream-btn');
+        const synopsisEl = document.getElementById('anime-synopsis');
         
         let hls = null;
         let isModalOpen = false;
+        let currentAnimeTitle = '';
 
         function showError(msg) {
             errorEl.innerText = msg;
@@ -291,29 +316,20 @@
             setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
         }
 
-        async function fetchWithFallback(endpoint) {
-            for (const base of API_INSTANCES) {
-                try {
-                    const res = await fetch(`${base}${endpoint}`);
-                    if (res.ok) return await res.json();
-                } catch (e) {
-                    console.warn(`Failed to fetch from ${base}, trying next...`);
-                }
-            }
-            throw new Error('All API instances failed');
+        async function fetchJikan(endpoint) {
+            const res = await fetch(`${JIKAN_BASE}${endpoint}`);
+            if (!res.ok) throw new Error(`Jikan Error: ${res.status}`);
+            return await res.json();
         }
 
-        // API Methods
         async function fetchTrending() {
             showLoader(true);
             try {
-                const data = await fetchWithFallback('/top-airing');
-                if (data && data.results) {
-                    renderGrid(data.results, 'trending-grid');
-                }
+                const data = await fetchJikan('/top/anime');
+                renderGrid(data.data || [], 'trending-grid');
             } catch (err) { 
                 console.error(err);
-                showError("API error: Could not load trending list.");
+                showError("Stability issue: Could not load top anime list.");
             }
             showLoader(false);
         }
@@ -321,9 +337,9 @@
         async function searchAnime(query) {
             showLoader(true);
             try {
-                const data = await fetchWithFallback(`/${encodeURIComponent(query)}`);
+                const data = await fetchJikan(`/anime?q=${encodeURIComponent(query)}`);
                 document.getElementById('results-section').classList.remove('hidden');
-                renderGrid(data.results || [], 'results-grid');
+                renderGrid(data.data || [], 'results-grid');
             } catch (err) { 
                 console.error(err);
                 showError("Search failed. Please try again.");
@@ -331,28 +347,72 @@
             showLoader(false);
         }
 
-        async function fetchInfo(id) {
+        async function fetchInfo(malId) {
             showLoader(true);
             try {
-                const data = await fetchWithFallback(`/info/${id}`);
-                renderEpisodes(data);
+                const data = (await fetchJikan(`/anime/${malId}`)).data;
+                currentAnimeTitle = data.title;
+                titleEl.innerText = data.title;
+                synopsisEl.innerText = data.synopsis || 'No synopsis available.';
+                
+                // Show trailer if exists
+                if (data.trailer && data.trailer.embed_url) {
+                    trailer.src = data.trailer.embed_url;
+                    trailer.classList.remove('hidden');
+                    video.classList.add('hidden');
+                } else {
+                    trailer.classList.add('hidden');
+                    trailer.src = '';
+                }
+
+                streamBtn.classList.remove('hidden');
+                document.getElementById('episodes-container').classList.add('hidden');
                 modal.style.display = 'flex';
                 isModalOpen = true;
-                titleEl.innerText = data.title;
                 document.getElementById('close-btn').focus();
             } catch (err) { 
                 console.error(err);
-                showError("Could not load anime info.");
+                showError("Could not load anime metadata.");
             }
             showLoader(false);
         }
 
-        async function playEpisode(epId) {
+        async function tryStream() {
+            showLoader(true);
+            const query = currentAnimeTitle.split(' ').slice(0, 3).join(' '); // Search fallback
+            let foundAnime = null;
+
+            for (const base of CONSUMET_FALLBACKS) {
+                try {
+                    const searchRes = await fetch(`${base}/${encodeURIComponent(query)}`);
+                    const searchData = await searchRes.json();
+                    if (searchData.results && searchData.results.length > 0) {
+                        foundAnime = searchData.results[0];
+                        const infoRes = await fetch(`${base}/info/${foundAnime.id}`);
+                        const infoData = await infoRes.json();
+                        renderEpisodes(infoData, base);
+                        document.getElementById('episodes-container').classList.remove('hidden');
+                        streamBtn.classList.add('hidden');
+                        showLoader(false);
+                        return;
+                    }
+                } catch (e) {
+                    console.warn(`Streaming fallback failed on ${base}`);
+                }
+            }
+            showError("Streaming currently unavailable for this title.");
+            showLoader(false);
+        }
+
+        async function playEpisode(epId, apiBase) {
             showLoader(true);
             try {
-                const data = await fetchWithFallback(`/watch/${epId}`);
+                const res = await fetch(`${apiBase}/watch/${epId}`);
+                const data = await res.json();
                 const source = data.sources.find(s => s.quality === 'default') || data.sources[0];
                 if (source && source.url) {
+                    trailer.classList.add('hidden');
+                    video.classList.remove('hidden');
                     loadStream(source.url);
                 } else {
                     throw new Error('No valid stream source found');
@@ -373,24 +433,24 @@
             }
             grid.innerHTML = results.map(item => `
                 <div class="focusable poster-card glass neon-border group cursor-pointer" 
-                     onclick="fetchInfo('${item.id}')" tabindex="0">
-                    <img src="${item.image}" class="aspect-[2/3] object-cover w-full" alt="${item.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                    <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
+                     onclick="fetchInfo('${item.mal_id}')" tabindex="0">
+                    <img src="${item.images.jpg.large_image_url}" class="aspect-[2/3] object-cover w-full" alt="${item.title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                    <div class="play-overlay"><i class="fa fa-info-circle text-4xl text-white"></i></div>
                     <div class="p-3">
                         <p class="text-xs font-bold truncate">${item.title}</p>
-                        <p class="text-[10px] text-gray-500 mt-1 uppercase">${item.releaseDate || 'Air-Now'}</p>
+                        <p class="text-[10px] text-gray-500 mt-1 uppercase">${item.type || 'TV'} • ${item.year || 'N/A'}</p>
                     </div>
                 </div>
             `).join('');
         }
 
-        function renderEpisodes(data) {
+        function renderEpisodes(data, apiBase) {
             if (!data.episodes || !data.episodes.length) {
-                epList.innerHTML = '<p class="text-gray-500">No episodes available.</p>';
+                epList.innerHTML = '<p class="text-gray-500">No streaming episodes found.</p>';
                 return;
             }
             epList.innerHTML = data.episodes.map(ep => `
-                <button class="episode-btn focusable" onclick="playEpisode('${ep.id}')" tabindex="0">
+                <button class="episode-btn focusable" onclick="playEpisode('${ep.id}', '${apiBase}')" tabindex="0">
                     EP ${ep.number}
                 </button>
             `).join('');
@@ -414,11 +474,8 @@
             if (hls) hls.destroy();
             video.pause();
             video.src = '';
+            trailer.src = '';
             isModalOpen = false;
-            // Focus first poster card or search input as fallback
-            const firstCard = document.querySelector('.poster-card');
-            if (firstCard) firstCard.focus();
-            else document.getElementById('search-input').focus();
         }
 
         function showLoader(show) {
