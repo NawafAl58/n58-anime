@@ -134,13 +134,6 @@
             background: #000;
         }
 
-        #trailer-frame {
-            width: 100%;
-            aspect-ratio: 16/9;
-            border-radius: 12px;
-            border: 2px solid var(--neon-purple);
-        }
-
         .episode-list {
             display: flex;
             gap: 10px;
@@ -199,6 +192,34 @@
             color: #fca5a5;
             text-align: center;
         }
+
+        .source-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .source-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s;
+        }
+
+        .source-btn.active {
+            background: var(--neon-purple);
+            border-color: white;
+            box-shadow: 0 0 10px var(--neon-purple);
+        }
+
+        .source-btn:focus {
+            outline: none;
+            box-shadow: 0 0 15px var(--ice-blue);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -254,18 +275,21 @@
             
             <div id="video-container">
                 <video id="video-player" controls playsinline class="hidden"></video>
-                <iframe id="trailer-frame" frameborder="0" allowfullscreen class="hidden"></iframe>
             </div>
 
             <div class="glass neon-border p-6">
                 <div class="flex justify-between items-start mb-4">
                     <h4 id="video-title" class="text-2xl font-black neon-text-purple">Loading Anime...</h4>
-                    <button id="stream-btn" class="hidden px-4 py-2 bg-ice-blue text-black font-bold rounded-lg hover:scale-105 transition-transform" onclick="tryStream()">
-                        <i class="fa fa-play mr-2"></i>WATCH NOW
-                    </button>
                 </div>
+                
+                <div class="source-toggle">
+                    <button class="source-btn active focusable" onclick="setSource('consumet')" id="src-consumet" tabindex="0">CONSUMET</button>
+                    <button class="source-btn focusable" onclick="setSource('torrentio')" id="src-torrentio" tabindex="0">TORRENTIO</button>
+                    <button class="source-btn focusable" onclick="setSource('orion')" id="src-orion" tabindex="0">ORION</button>
+                </div>
+
                 <div id="episodes-container" class="hidden">
-                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Select Episode</p>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Select Episode / Stream</p>
                     <div class="episode-list focusable" id="episode-list" tabindex="0"></div>
                 </div>
                 <div id="meta-container" class="mt-4 text-sm text-gray-400">
@@ -291,20 +315,23 @@
     <script>
         const JIKAN_BASE = 'https://api.jikan.moe/v4';
         const CONSUMET_BASE = 'https://consumet-api-private-n58-nawafal58s-projects.vercel.app/anime/gogoanime';
+        const TORRENTIO_BASE = 'https://torrentio.strem.fun';
+        const ORION_BASE = 'https://api.orionoid.com'; // Requires user API Key for full resolution, using public-ish addon endpoint patterns
         
         const modal = document.getElementById('player-modal');
         const video = document.getElementById('video-player');
-        const trailer = document.getElementById('trailer-frame');
         const titleEl = document.getElementById('video-title');
         const epList = document.getElementById('episode-list');
         const loader = document.getElementById('loading-overlay');
         const errorEl = document.getElementById('error-message');
-        const streamBtn = document.getElementById('stream-btn');
         const synopsisEl = document.getElementById('anime-synopsis');
         
         let hls = null;
         let isModalOpen = false;
         let currentAnimeTitle = '';
+        let currentImdbId = '';
+        let currentMalId = '';
+        let activeSource = 'consumet';
 
         function showError(msg) {
             errorEl.innerText = msg;
@@ -348,16 +375,18 @@
             try {
                 const data = (await fetchJikan(`/anime/${malId}`)).data;
                 currentAnimeTitle = data.title;
+                currentMalId = malId;
+                
+                // Get IMDb ID via external IDs (Jikan provides this)
+                const extData = await fetchJikan(`/anime/${malId}/external`);
+                const imdb = extData.data.find(x => x.name === 'IMDb');
+                currentImdbId = imdb ? imdb.url.split('/').filter(Boolean).pop() : '';
+                
                 titleEl.innerText = data.title;
                 synopsisEl.innerText = data.synopsis || 'No synopsis available.';
                 
-                // Hide video and trailer initial state
                 video.classList.add('hidden');
-                trailer.classList.add('hidden');
-                trailer.src = '';
-
-                // Load episodes immediately for better UX
-                await tryStream();
+                await loadCurrentSource();
 
                 modal.style.display = 'flex';
                 isModalOpen = true;
@@ -369,57 +398,124 @@
             showLoader(false);
         }
 
-        async function tryStream() {
+        function setSource(src) {
+            activeSource = src;
+            document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`src-${src}`).classList.add('active');
+            loadCurrentSource();
+        }
+
+        async function loadCurrentSource() {
             showLoader(true);
-            const query = currentAnimeTitle.split(' ').slice(0, 3).join(' '); // Search fallback
-            
+            epList.innerHTML = '';
             try {
-                const searchRes = await fetch(`${CONSUMET_BASE}/${encodeURIComponent(query)}`);
-                const searchData = await searchRes.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    const foundAnime = searchData.results[0];
-                    const infoRes = await fetch(`${CONSUMET_BASE}/info/${foundAnime.id}`);
-                    const infoData = await infoRes.json();
-                    renderEpisodes(infoData);
-                    document.getElementById('episodes-container').classList.remove('hidden');
-                    streamBtn.classList.add('hidden');
-                } else {
-                    throw new Error('No streaming results');
+                if (activeSource === 'consumet') {
+                    await fetchConsumet();
+                } else if (activeSource === 'torrentio') {
+                    await fetchTorrentio();
+                } else if (activeSource === 'orion') {
+                    await fetchOrion();
                 }
             } catch (e) {
                 console.error(e);
-                showError("Streaming currently unavailable for this title.");
-                epList.innerHTML = '<p class="text-gray-500">No episodes found on streaming server.</p>';
-                document.getElementById('episodes-container').classList.remove('hidden');
+                epList.innerHTML = '<p class="text-gray-500">Source currently unavailable.</p>';
             }
             showLoader(false);
         }
 
-        async function playEpisode(epId) {
+        async function fetchConsumet() {
+            const query = currentAnimeTitle.split(' ').slice(0, 3).join(' ');
+            const searchRes = await fetch(`${CONSUMET_BASE}/${encodeURIComponent(query)}`);
+            const searchData = await searchRes.json();
+            if (searchData.results && searchData.results.length > 0) {
+                const foundAnime = searchData.results[0];
+                const infoRes = await fetch(`${CONSUMET_BASE}/info/${foundAnime.id}`);
+                const infoData = await infoRes.json();
+                renderEpisodes(infoData.episodes, 'consumet');
+                document.getElementById('episodes-container').classList.remove('hidden');
+            } else {
+                throw new Error('No Consumet results');
+            }
+        }
+
+        async function fetchTorrentio() {
+            if (!currentImdbId) throw new Error('No IMDb ID for Torrentio');
+            // Stremio addon pattern: /stream/series/{id}:{s}:{e}.json or /stream/movie/{id}.json
+            const type = 'series'; // For anime we usually treat as series
+            const url = `${TORRENTIO_BASE}/stream/${type}/${currentImdbId}:1:1.json`;
+            const res = await fetch(url);
+            const data = await res.json();
+            renderEpisodes(data.streams, 'torrentio');
+            document.getElementById('episodes-container').classList.remove('hidden');
+        }
+
+        async function fetchOrion() {
+            if (!currentImdbId) throw new Error('No IMDb ID for Orion');
+            // Using a public-ish pattern or proxy if direct API fails due to auth
+            // Here we simulate resolution via IMDb ID
+            const url = `https://stremio-orionoid.strem.fun/stream/series/${currentImdbId}:1:1.json`;
+            const res = await fetch(url);
+            const data = await res.json();
+            renderEpisodes(data.streams, 'orion');
+            document.getElementById('episodes-container').classList.remove('hidden');
+        }
+
+        function renderEpisodes(items, source) {
+            if (!items || !items.length) {
+                epList.innerHTML = '<p class="text-gray-500">No streams found.</p>';
+                return;
+            }
+
+            if (source === 'consumet') {
+                epList.innerHTML = items.map(ep => `
+                    <button class="episode-btn focusable" onclick="playStream('${ep.id}', 'consumet')" tabindex="0">
+                        EP ${ep.number}
+                    </button>
+                `).join('');
+            } else {
+                // Torrentio/Orion return direct stream objects
+                epList.innerHTML = items.map((s, idx) => `
+                    <button class="episode-btn focusable" onclick="playDirectStream('${s.url || s.infoHash}', '${s.title || 'Stream ' + (idx+1)}')" tabindex="0">
+                        ${s.name || 'Stream'} - ${idx + 1}
+                    </button>
+                `).join('');
+            }
+        }
+
+        async function playStream(id, source) {
             showLoader(true);
             try {
-                const res = await fetch(`${CONSUMET_BASE}/watch/${epId}`);
-                const data = await res.json();
-                
-                // Prefer HLS/m3u8 sources
-                const hlsSource = data.sources.find(s => s.url.includes('.m3u8'));
-                const source = hlsSource || data.sources.find(s => s.quality === 'default') || data.sources[0];
-                
-                if (source && source.url) {
-                    trailer.classList.add('hidden');
-                    video.classList.remove('hidden');
-                    loadStream(source.url);
-                } else {
-                    throw new Error('No valid stream source found');
+                if (source === 'consumet') {
+                    const res = await fetch(`${CONSUMET_BASE}/watch/${id}`);
+                    const data = await res.json();
+                    const hlsSource = data.sources.find(s => s.url.includes('.m3u8'));
+                    const url = hlsSource ? hlsSource.url : (data.sources[0]?.url);
+                    if (url) loadStream(url);
                 }
-            } catch (err) { 
-                console.error(err);
-                showError("Streaming error: Link not found.");
-            }
+            } catch (err) { showError("Streaming error."); }
             showLoader(false);
         }
 
-        // UI Rendering
+        function playDirectStream(url, title) {
+            if (!url) { showError("No direct link available."); return; }
+            // If it's an infohash (magnet), we might need a debrid resolver, but assuming direct links for this UI
+            loadStream(url);
+        }
+
+        function loadStream(url) {
+            video.classList.remove('hidden');
+            if (Hls.isSupported() && url.includes('.m3u8')) {
+                if (hls) hls.destroy();
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+            } else {
+                video.src = url;
+                video.play();
+            }
+        }
+
         function renderGrid(results, gridId) {
             const grid = document.getElementById(gridId);
             if (!results.length) {
@@ -433,35 +529,9 @@
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
                         <p class="text-xs font-bold truncate">${item.title}</p>
-                        <p class="text-[10px] text-gray-500 mt-1 uppercase">${item.type || 'TV'} • ${item.year || 'N/A'}</p>
                     </div>
                 </div>
             `).join('');
-        }
-
-        function renderEpisodes(data) {
-            if (!data.episodes || !data.episodes.length) {
-                epList.innerHTML = '<p class="text-gray-500">No streaming episodes found.</p>';
-                return;
-            }
-            epList.innerHTML = data.episodes.map(ep => `
-                <button class="episode-btn focusable" onclick="playEpisode('${ep.id}')" tabindex="0">
-                    EP ${ep.number}
-                </button>
-            `).join('');
-        }
-
-        function loadStream(url) {
-            if (Hls.isSupported()) {
-                if (hls) hls.destroy();
-                hls = new Hls();
-                hls.loadSource(url);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => console.log('Autoplay blocked')));
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url;
-                video.play().catch(e => console.log('Autoplay blocked'));
-            }
         }
 
         function closePlayer() {
@@ -469,7 +539,6 @@
             if (hls) hls.destroy();
             video.pause();
             video.src = '';
-            trailer.src = '';
             isModalOpen = false;
         }
 
@@ -477,7 +546,6 @@
             loader.style.display = show ? 'flex' : 'none';
         }
 
-        // Navigation & Events
         document.getElementById('search-form').onsubmit = (e) => {
             e.preventDefault();
             const query = document.getElementById('search-input').value;
@@ -485,14 +553,12 @@
         };
 
         document.addEventListener('keydown', (e) => {
-            const focusables = Array.from(document.querySelectorAll('.focusable, .poster-card, .episode-btn, [tabindex="0"]'));
+            const focusables = Array.from(document.querySelectorAll('.focusable, .poster-card, .episode-btn, .source-btn, [tabindex="0"]'));
             const currentIndex = focusables.indexOf(document.activeElement);
 
-            if (isModalOpen) {
-                if (e.key === 'Escape' || e.key === 'Backspace') {
-                    closePlayer();
-                    e.preventDefault();
-                }
+            if (isModalOpen && (e.key === 'Escape' || e.key === 'Backspace')) {
+                closePlayer();
+                e.preventDefault();
             }
 
             if (e.key === 'ArrowRight') {
