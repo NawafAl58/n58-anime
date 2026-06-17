@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N58 Anime</title>
+    <title>N58 Anime - Live VOD</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- HLS.js for IPTV/M3U8 support -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root {
             --obsidian: #050505;
             --neon-purple: #a855f7;
             --ice-blue: #38bdf8;
-            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-bg: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(168, 85, 247, 0.3);
         }
 
@@ -44,7 +43,6 @@
             text-shadow: 0 0 8px var(--ice-blue);
         }
 
-        /* TV Navigation Focus States */
         .focusable:focus {
             outline: none;
             box-shadow: 0 0 20px var(--ice-blue);
@@ -112,15 +110,18 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.9);
+            background-color: rgba(0,0,0,0.95);
             align-items: center;
             justify-content: center;
         }
 
         .modal-content {
-            width: 90%;
-            max-width: 1000px;
+            width: 95%;
+            max-width: 1200px;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         #video-player {
@@ -132,14 +133,60 @@
             background: #000;
         }
 
-        #close-btn:focus {
-            color: var(--ice-blue);
-            transform: scale(1.2);
+        .episode-list {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            scroll-behavior: smooth;
+        }
+
+        .episode-btn {
+            flex: 0 0 auto;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .episode-btn:focus {
+            background: var(--ice-blue);
+            color: black;
+            box-shadow: 0 0 15px var(--ice-blue);
+            border-color: white;
             outline: none;
         }
+
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(168, 85, 247, 0.2);
+            border-top: 5px solid var(--neon-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="p-4 md:p-8">
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
 
     <!-- Header -->
     <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
@@ -148,67 +195,48 @@
             <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Made by Nawaf</p>
         </div>
         
-        <div class="relative w-full md:w-96">
-            <input type="text" placeholder="Search anime movies, series..." 
+        <form id="search-form" class="relative w-full md:w-96">
+            <input type="text" id="search-input" placeholder="Search anime series..." 
                    class="focusable w-full bg-black/40 glass neon-border py-3 px-12 rounded-full text-sm focus:ring-0"
                    tabindex="0">
-            <i class="fa fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        </div>
+            <button type="submit" class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fa fa-search"></i>
+            </button>
+        </form>
     </header>
 
-    <!-- Hero Section (Featured) -->
-    <section class="mb-12 relative rounded-2xl overflow-hidden glass neon-border h-[300px] md:h-[450px]">
-        <img src="https://image.tmdb.org/t/p/original/mdfGMR7YmUvSST9p8Y9989un9A1.jpg" 
-             class="w-full h-full object-cover opacity-50" alt="Hero">
-        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent flex flex-col justify-end p-6 md:p-12">
-            <span class="bg-purple-600/80 text-white text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-4 uppercase">Trending #1</span>
-            <h2 class="text-3xl md:text-5xl font-black mb-4 neon-text-blue uppercase italic">One Piece Red</h2>
-            <p class="text-gray-300 max-w-xl text-sm md:text-base mb-6 line-clamp-2 md:line-clamp-none">Uta, the most beloved singer in the world, whose voice has been described as "otherworldly", is renowned for concealing her own identity while performing.</p>
-            <button onclick="openPlayer('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', 'One Piece Film: Red')" 
-                    class="focusable glass border-ice-blue/50 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10 transition-all w-fit"
-                    tabindex="0">
-                <i class="fa fa-play text-ice-blue"></i> WATCH STREAM
-            </button>
-        </div>
-    </section>
-
-    <!-- Categories -->
+    <!-- Main Content -->
     <main class="space-y-12">
-        
-        <!-- Movies -->
-        <section>
+        <section id="results-section" class="hidden">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-1 h-6 bg-ice-blue"></div>
+                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-blue">Search Results</h3>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4" id="results-grid"></div>
+        </section>
+
+        <section id="trending-section">
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-1 h-6 bg-purple-500"></div>
-                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-purple">Legendary Movies</h3>
+                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-purple">Trending Now</h3>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4" id="movies-grid">
-                <!-- Movie cards populated by JS -->
-            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4" id="trending-grid"></div>
         </section>
-
-        <!-- Series -->
-        <section>
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-1 h-6 bg-blue-500"></div>
-                <h3 class="text-xl font-bold uppercase tracking-widest neon-text-blue">Top Rated Series</h3>
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4" id="series-grid">
-                <!-- Series cards populated by JS -->
-            </div>
-        </section>
-
     </main>
 
     <!-- Player Modal -->
-    <div id="player-modal" class="modal" onclick="closePlayer()">
+    <div id="player-modal" class="modal">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button id="close-btn" class="absolute -top-12 right-0 text-white text-3xl hover:text-ice-blue focusable" onclick="closePlayer()" tabindex="0">
                 <i class="fa fa-times"></i>
             </button>
-            <video id="video-player" controls playsinline tabindex="-1"></video>
-            <div class="mt-4 p-4 glass neon-border">
-                <h4 id="video-title" class="text-xl font-bold neon-text-purple">Streaming Now</h4>
-                <p class="text-xs text-gray-400 mt-2">Server: N58-IPTV-Node (HLS Engine)</p>
+            <video id="video-player" controls playsinline></video>
+            <div class="glass neon-border p-6">
+                <h4 id="video-title" class="text-2xl font-black neon-text-purple mb-4">Loading Anime...</h4>
+                <div id="episodes-container">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Select Episode</p>
+                    <div class="episode-list focusable" id="episode-list" tabindex="0"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -220,98 +248,102 @@
             <p class="text-[10px] text-gray-600 uppercase mt-1">Made by Nawaf</p>
         </div>
         <div class="flex gap-6 text-sm text-gray-400">
+            <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">Discord</a>
             <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">Privacy</a>
             <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">DMCA</a>
-            <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">Terms</a>
-            <a href="#" class="focusable hover:text-ice-blue transition-colors" tabindex="0">Discord</a>
-        </div>
-        <div class="text-[10px] text-gray-600">
-            &copy; 2026 N58 Anime. All rights reserved.
         </div>
     </footer>
 
     <script>
-        const animeLibrary = {
-            movies: [
-                { title: "Your Name", year: "2016", rating: "8.4", poster: "https://image.tmdb.org/t/p/w500/q719jsmZvqcHiuOqk969pYzpU7H.jpg", stream: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" },
-                { title: "Spirited Away", year: "2001", rating: "8.6", poster: "https://image.tmdb.org/t/p/w500/39wmItIW95sZ6I6PZIVSYfP2H0U.jpg", stream: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                { title: "Weathering With You", year: "2019", rating: "7.5", poster: "https://image.tmdb.org/t/p/w500/7I089vV7vH1YvR0M6BAbYSTP95N.jpg", stream: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
-                { title: "Jujutsu Kaisen 0", year: "2021", rating: "7.8", poster: "https://image.tmdb.org/t/p/w500/3pTwMUEav6oMDpU66pWpXSTpTY0.jpg", stream: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                { title: "Mugen Train", year: "2020", rating: "8.2", poster: "https://image.tmdb.org/t/p/w500/h8S9YpBAsvMv888p9989un9A1.jpg", stream: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" },
-                { title: "A Silent Voice", year: "2016", rating: "8.1", poster: "https://image.tmdb.org/t/p/w500/tuFa668p88S2T6vSshKAdN49377.jpg", stream: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
-            ],
-            series: [
-                { title: "Attack on Titan", info: "Final Season", rating: "9.1", poster: "https://image.tmdb.org/t/p/w500/hEkaBfsS5oxv8mUWu7D98JvNcUo.jpg", stream: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                { title: "One Piece", info: "1100+ Eps", rating: "8.9", poster: "https://image.tmdb.org/t/p/w500/c3Y9pS76u9pSST9p8Y9989un9A1.jpg", stream: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" },
-                { title: "Solo Leveling", info: "Season 1", rating: "8.5", poster: "https://image.tmdb.org/t/p/w500/966mUoA2C59uSST9p8Y9989un9A1.jpg", stream: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                { title: "Chainsaw Man", info: "Season 1", rating: "8.5", poster: "https://image.tmdb.org/t/p/w500/yvSST9p8Y9989un9A1.jpg", stream: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
-                { title: "Fullmetal Alchemist", info: "Complete", rating: "9.1", poster: "https://image.tmdb.org/t/p/w500/5S76u9pSST9p8Y9989un9A1.jpg", stream: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                { title: "Jujutsu Kaisen", info: "Season 2", rating: "8.7", poster: "https://image.tmdb.org/t/p/w500/gSST9p8Y9989un9A1.jpg", stream: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" }
-            ]
-        };
-
+        const API_BASE = 'https://api-consumet-org-gamma.vercel.app/anime/gogoanime';
         const modal = document.getElementById('player-modal');
         const video = document.getElementById('video-player');
         const titleEl = document.getElementById('video-title');
-        const closeBtn = document.getElementById('close-btn');
-
-        let isModalOpen = false;
+        const epList = document.getElementById('episode-list');
+        const loader = document.getElementById('loading-overlay');
+        
         let hls = null;
+        let isModalOpen = false;
 
-        function renderLibrary() {
-            const moviesGrid = document.getElementById('movies-grid');
-            const seriesGrid = document.getElementById('series-grid');
-
-            animeLibrary.movies.forEach(anime => {
-                moviesGrid.innerHTML += createCard(anime, 'Movie • ' + anime.year);
-            });
-
-            animeLibrary.series.forEach(anime => {
-                seriesGrid.innerHTML += createCard(anime, 'TV • ' + anime.info);
-            });
+        // API Methods
+        async function fetchTrending() {
+            showLoader(true);
+            try {
+                const res = await fetch(`${API_BASE}/top-airing`);
+                const data = await res.json();
+                renderGrid(data.results, 'trending-grid');
+            } catch (err) { console.error(err); }
+            showLoader(false);
         }
 
-        function createCard(anime, sub) {
-            return `
+        async function searchAnime(query) {
+            showLoader(true);
+            try {
+                const res = await fetch(`${API_BASE}/${query}`);
+                const data = await res.json();
+                document.getElementById('results-section').classList.remove('hidden');
+                renderGrid(data.results, 'results-grid');
+            } catch (err) { console.error(err); }
+            showLoader(false);
+        }
+
+        async function fetchInfo(id) {
+            showLoader(true);
+            try {
+                const res = await fetch(`${API_BASE}/info/${id}`);
+                const data = await res.json();
+                renderEpisodes(data);
+                modal.style.display = 'flex';
+                isModalOpen = true;
+                titleEl.innerText = data.title;
+                document.getElementById('close-btn').focus();
+            } catch (err) { console.error(err); }
+            showLoader(false);
+        }
+
+        async function playEpisode(epId) {
+            showLoader(true);
+            try {
+                const res = await fetch(`${API_BASE}/watch/${epId}`);
+                const data = await res.json();
+                const source = data.sources.find(s => s.quality === 'default') || data.sources[0];
+                loadStream(source.url);
+            } catch (err) { console.error(err); }
+            showLoader(false);
+        }
+
+        // UI Rendering
+        function renderGrid(results, gridId) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = results.map(item => `
                 <div class="focusable poster-card glass neon-border group cursor-pointer" 
-                     onclick="openPlayer('${anime.stream}', '${anime.title}')" tabindex="0">
-                    <img src="${anime.poster}" class="aspect-[2/3] object-cover w-full" alt="${anime.title}">
+                     onclick="fetchInfo('${item.id}')" tabindex="0">
+                    <img src="${item.image}" class="aspect-[2/3] object-cover w-full" alt="${item.title}">
                     <div class="play-overlay"><i class="fa fa-play-circle text-4xl text-white"></i></div>
                     <div class="p-3">
-                        <div class="flex justify-between items-start gap-2">
-                            <p class="text-xs font-bold truncate">${anime.title}</p>
-                            <span class="text-[9px] bg-ice-blue/20 text-ice-blue px-1 rounded">${anime.rating}</span>
-                        </div>
-                        <p class="text-[10px] text-gray-400">${sub}</p>
+                        <p class="text-xs font-bold truncate">${item.title}</p>
+                        <p class="text-[10px] text-gray-500 mt-1 uppercase">${item.releaseDate || 'Air-Now'}</p>
                     </div>
                 </div>
-            `;
+            `).join('');
         }
 
-        function openPlayer(url, title) {
-            titleEl.innerText = title;
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            isModalOpen = true;
-            closeBtn.focus();
+        function renderEpisodes(data) {
+            epList.innerHTML = data.episodes.map(ep => `
+                <button class="episode-btn focusable" onclick="playEpisode('${ep.id}')" tabindex="0">
+                    EP ${ep.number}
+                </button>
+            `).join('');
+        }
 
-            if (url.includes('.m3u8')) {
-                if (Hls.isSupported()) {
-                    if (hls) hls.destroy();
-                    hls = new Hls();
-                    hls.loadSource(url);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                        video.play();
-                    });
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = url;
-                    video.addEventListener('loadedmetadata', function() {
-                        video.play();
-                    });
-                }
-            } else {
+        function loadStream(url) {
+            if (Hls.isSupported()) {
                 if (hls) hls.destroy();
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = url;
                 video.play();
             }
@@ -322,18 +354,27 @@
             if (hls) hls.destroy();
             video.pause();
             video.src = '';
-            document.body.style.overflow = 'auto';
             isModalOpen = false;
             document.querySelector('.poster-card').focus();
         }
 
+        function showLoader(show) {
+            loader.style.display = show ? 'flex' : 'none';
+        }
+
+        // Navigation & Events
+        document.getElementById('search-form').onsubmit = (e) => {
+            e.preventDefault();
+            const query = document.getElementById('search-input').value;
+            if (query) searchAnime(query);
+        };
+
         document.addEventListener('keydown', (e) => {
-            const focusables = Array.from(document.querySelectorAll('.focusable, .poster-card, [tabindex="0"]'));
+            const focusables = Array.from(document.querySelectorAll('.focusable, .poster-card, .episode-btn, [tabindex="0"]'));
             const currentIndex = focusables.indexOf(document.activeElement);
 
             if (isModalOpen) {
                 if (e.key === 'Escape' || e.key === 'Backspace') closePlayer();
-                return;
             }
 
             if (e.key === 'ArrowRight') {
@@ -344,26 +385,14 @@
                 const prev = focusables[currentIndex - 1] || focusables[focusables.length - 1];
                 prev.focus();
                 e.preventDefault();
-            } else if (e.key === 'ArrowDown') {
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                 const currentRect = document.activeElement.getBoundingClientRect();
                 let bestMatch = null;
                 let minDiff = Infinity;
                 focusables.forEach(el => {
                     const rect = el.getBoundingClientRect();
-                    if (rect.top > currentRect.bottom) {
-                        const diff = Math.abs(rect.left - currentRect.left);
-                        if (diff < minDiff) { minDiff = diff; bestMatch = el; }
-                    }
-                });
-                if (bestMatch) bestMatch.focus();
-                e.preventDefault();
-            } else if (e.key === 'ArrowUp') {
-                const currentRect = document.activeElement.getBoundingClientRect();
-                let bestMatch = null;
-                let minDiff = Infinity;
-                focusables.forEach(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (rect.bottom < currentRect.top) {
+                    const isBelow = e.key === 'ArrowDown' ? rect.top > currentRect.bottom : rect.bottom < currentRect.top;
+                    if (isBelow) {
                         const diff = Math.abs(rect.left - currentRect.left);
                         if (diff < minDiff) { minDiff = diff; bestMatch = el; }
                     }
@@ -371,13 +400,14 @@
                 if (bestMatch) bestMatch.focus();
                 e.preventDefault();
             } else if (e.key === 'Enter') {
-                if (document.activeElement.click) document.activeElement.click();
+                if (document.activeElement.tagName === 'INPUT') return;
+                document.activeElement.click();
             }
         });
 
         window.onload = () => {
-            renderLibrary();
-            document.querySelector('input').focus();
+            fetchTrending();
+            document.getElementById('search-input').focus();
         };
     </script>
 </body>
